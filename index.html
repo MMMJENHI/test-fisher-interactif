@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Test de Fisher en R - Guide Interactif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .code-block {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .nav-active {
+            background-color: #e0e7ff;
+            color: #4338ca;
+            border-left-width: 4px;
+            border-left-color: #4338ca;
+        }
+        .tab-active {
+            background-color: #4f46e5;
+            color: white;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden">
+
+    <!-- Chosen Palette: Slate and Indigo (Warm neutrals with subtle blue/indigo accents) -->
+    <!-- Application Structure Plan: A single-page interactive tutorial dashboard. It features a fixed navigation sidebar for desktop (and top bar for mobile) for easy movement between logical steps: Introduction, Data & Visualization, R Code Implementation, and Result Interpretation. This step-by-step structure mirrors the logical process of performing a statistical test, making the conceptual information highly consumable and guiding the user through the methodology. -->
+    <!-- Visualization & Content Choices: 1. Contingency Data -> Compare -> Stacked Bar Chart (Chart.js) -> Hover tooltips -> Visually demonstrates the association before running the math. 2. R Code -> Inform -> Styled monospace blocks -> Interactive copy capability -> Makes it practical. 3. Statistical Concepts (p-value, OR, CI) -> Explore -> Interactive Tabs -> Click to reveal details -> Reduces cognitive overload by breaking down complex interpretations. Library/Method: Chart.js for data viz, Vanilla JS for interactivity. Confirming NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        
+        <nav class="w-full md:w-64 bg-white shadow-lg md:fixed h-auto md:h-screen z-10 flex flex-col">
+            <div class="p-6 border-b border-slate-200">
+                <h1 class="text-2xl font-bold text-indigo-700">Test de Fisher 📊</h1>
+                <p class="text-xs text-slate-500 mt-2">Guide Pratique sur R</p>
+            </div>
+            <div class="flex-grow flex flex-col overflow-y-auto py-4">
+                <button data-target="section-intro" class="nav-btn text-left px-6 py-3 hover:bg-slate-100 text-slate-700 font-medium transition-colors nav-active">1. Introduction</button>
+                <button data-target="section-data" class="nav-btn text-left px-6 py-3 hover:bg-slate-100 text-slate-700 font-medium transition-colors">2. Table de Contingence</button>
+                <button data-target="section-code" class="nav-btn text-left px-6 py-3 hover:bg-slate-100 text-slate-700 font-medium transition-colors">3. Implémentation R</button>
+                <button data-target="section-interpretation" class="nav-btn text-left px-6 py-3 hover:bg-slate-100 text-slate-700 font-medium transition-colors">4. Interprétation</button>
+            </div>
+        </nav>
+
+        <main class="w-full md:ml-64 p-6 md:p-12 lg:px-24">
+            
+            <section id="section-intro" class="mb-20 min-h-[80vh] flex flex-col justify-center">
+                <div class="max-w-3xl">
+                    <h2 class="text-4xl font-extrabold text-slate-900 mb-6">Le Test de Fisher en R</h2>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        Cette section introduit le concept fondamental du test. Vous y découvrirez son utilité principale et pourquoi il est parfois préféré à d'autres méthodes statistiques pour évaluer les relations entre différentes catégories de données.
+                    </p>
+                    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                        <p class="text-slate-700 mb-4">
+                            Le test de Fisher en R est une méthode statistique utilisée pour évaluer l'association entre deux variables catégorielles.
+                        </p>
+                        <div class="flex items-start space-x-4 mt-6 p-4 bg-indigo-50 rounded-lg">
+                            <span class="text-2xl">💡</span>
+                            <div>
+                                <h3 class="font-semibold text-indigo-900">Quand l'utiliser ?</h3>
+                                <p class="text-indigo-800 mt-1">
+                                    Il est particulièrement utile pour les petits échantillons de données où le test du Chi-2 pourrait ne pas être approprié en raison des faibles effectifs théoriques.
+                                </p>
+                            </div>
+                        </div>
+                        <p class="text-slate-700 mt-6">
+                            R utilise la fonction <code class="bg-slate-100 text-pink-600 px-2 py-1 rounded">fisher.test()</code> qui est incluse dans le package de base, donc vous n'avez pas besoin de l'installer séparément.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-data" class="mb-20 min-h-[80vh] flex flex-col justify-center">
+                <div class="max-w-4xl">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6">La Table de Contingence</h2>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        Ici, nous examinons l'exemple spécifique du rapport : l'association potentielle entre le sexe d'une personne et la possession d'un chat. Observez comment les données sont structurées avant l'analyse.
+                    </p>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4 text-xl">L'Échantillon (N = 20)</h3>
+                            <p class="text-slate-600 mb-6">Imaginons que nous voulions savoir s'il y a une association entre le fait d'avoir un chat 🐈 et le sexe 👨👩 d'une personne.</p>
+                            
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr>
+                                        <th class="py-3 border-b-2 border-slate-200 text-slate-400"></th>
+                                        <th class="py-3 border-b-2 border-slate-200 text-indigo-600 font-bold">Avec chat</th>
+                                        <th class="py-3 border-b-2 border-slate-200 text-slate-600 font-bold">Sans chat</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="py-4 border-b border-slate-100 font-semibold text-slate-700">Hommes</td>
+                                        <td class="py-4 border-b border-slate-100 text-xl font-bold text-indigo-600">4</td>
+                                        <td class="py-4 border-b border-slate-100 text-xl">6</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="py-4 font-semibold text-slate-700">Femmes</td>
+                                        <td class="py-4 text-xl font-bold text-indigo-600">8</td>
+                                        <td class="py-4 text-xl">2</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4 text-xl">Visualisation des Proportions</h3>
+                            <div class="chart-container">
+                                <canvas id="contingencyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-code" class="mb-20 min-h-[80vh] flex flex-col justify-center">
+                <div class="max-w-3xl">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6">Exécution dans R</h2>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        Cette section détaille les étapes exactes de programmation pour reproduire l'analyse. La fonction prend comme argument principal une table de contingence.
+                    </p>
+
+                    <div class="space-y-6">
+                        <div class="bg-slate-900 rounded-xl overflow-hidden shadow-md">
+                            <div class="bg-slate-800 px-4 py-2 flex justify-between items-center">
+                                <span class="text-slate-300 text-sm font-medium">1. Création de la matrice</span>
+                                <button onclick="copyCode('code1')" class="text-slate-400 hover:text-white transition-colors text-sm">Copier 📋</button>
+                            </div>
+                            <div class="p-4 code-block text-slate-300 overflow-x-auto" id="code1">
+<span class="text-slate-500"># Création de la matrice de données</span><br>
+<span class="text-blue-400">donnees_matrice</span> <- matrix(c(<span class="text-orange-400">4</span>, <span class="text-orange-400">6</span>, <span class="text-orange-400">8</span>, <span class="text-orange-400">2</span>), nrow = <span class="text-orange-400">2</span>, byrow = <span class="text-green-400">TRUE</span>)<br><br>
+<span class="text-slate-500"># Ajout des noms de lignes et de colonnes pour une meilleure lisibilité</span><br>
+rownames(<span class="text-blue-400">donnees_matrice</span>) <- c(<span class="text-green-300">"Hommes"</span>, <span class="text-green-300">"Femmes"</span>)<br>
+colnames(<span class="text-blue-400">donnees_matrice</span>) <- c(<span class="text-green-300">"Avec chat"</span>, <span class="text-green-300">"Sans chat"</span>)<br><br>
+<span class="text-slate-500"># Affichage de la table</span><br>
+print(<span class="text-blue-400">donnees_matrice</span>)
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 rounded-xl overflow-hidden shadow-md">
+                            <div class="bg-slate-800 px-4 py-2 flex justify-between items-center">
+                                <span class="text-slate-300 text-sm font-medium">2. Exécution du test</span>
+                                <button onclick="copyCode('code2')" class="text-slate-400 hover:text-white transition-colors text-sm">Copier 📋</button>
+                            </div>
+                            <div class="p-4 code-block text-slate-300 overflow-x-auto" id="code2">
+<span class="text-slate-500"># Exécution du test de Fisher</span><br>
+<span class="text-blue-400">test_fisher</span> <- fisher.test(<span class="text-blue-400">donnees_matrice</span>)<br><br>
+<span class="text-slate-500"># Affichage des résultats</span><br>
+print(<span class="text-blue-400">test_fisher</span>)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-interpretation" class="mb-20 min-h-[80vh] flex flex-col justify-center">
+                <div class="max-w-4xl">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6">Interprétation des Résultats</h2>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        Que signifient les résultats calculés par R ? Cette section décortique les trois métriques cruciales fournies par la fonction pour comprendre la relation entre le sexe et la possession d'un chat.
+                    </p>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="flex border-b border-slate-200 overflow-x-auto">
+                            <button class="interp-tab flex-1 py-4 px-6 text-center font-semibold tab-active whitespace-nowrap" data-tab="pvalue">La p-value</button>
+                            <button class="interp-tab flex-1 py-4 px-6 text-center font-semibold text-slate-600 hover:bg-slate-50 whitespace-nowrap" data-tab="odds">Odds Ratio</button>
+                            <button class="interp-tab flex-1 py-4 px-6 text-center font-semibold text-slate-600 hover:bg-slate-50 whitespace-nowrap" data-tab="interval">Intervalle de Confiance</button>
+                        </div>
+
+                        <div class="p-8 min-h-[250px] flex items-center">
+                            
+                            <div id="content-pvalue" class="tab-content w-full">
+                                <h3 class="text-2xl font-bold text-indigo-700 mb-4">La p-value</h3>
+                                <p class="text-lg text-slate-700 mb-4">C'est la valeur la plus importante de votre résultat.</p>
+                                <div class="bg-slate-50 border-l-4 border-indigo-500 p-4 mb-4 text-slate-600">
+                                    Si la p-value est inférieure à votre seuil de signification (généralement <strong class="text-slate-900">0,05</strong>), vous rejetez l'hypothèse nulle (H_0) qui postule qu'il n'y a pas d'association entre les deux variables.
+                                </div>
+                                <p class="text-slate-700 font-medium bg-green-50 p-3 rounded text-green-800">
+                                    🎯 Conclusion pour notre exemple : Si la p-value est très faible (par exemple, p < 0.05), on peut conclure qu'il y a une association statistiquement significative entre le sexe et le fait d'avoir un chat dans l'échantillon.
+                                </p>
+                            </div>
+
+                            <div id="content-odds" class="tab-content w-full hidden">
+                                <h3 class="text-2xl font-bold text-indigo-700 mb-4">Odds ratio (Rapport de cotes)</h3>
+                                <p class="text-lg text-slate-700 mb-4">Cet indicateur mesure la <strong class="text-slate-900">force de l'association</strong>.</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                    <div class="bg-indigo-50 p-6 rounded-lg text-center">
+                                        <span class="block text-4xl mb-2">⚖️</span>
+                                        <span class="text-indigo-900 font-bold block mb-2">Supérieur à 1</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <p class="text-slate-700">
+                                            Par exemple, un odds ratio supérieur à 1 suggère que l'événement "avoir un chat" est plus probable pour les femmes que pour les hommes (selon la structure de la matrice).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="content-interval" class="tab-content w-full hidden">
+                                <h3 class="text-2xl font-bold text-indigo-700 mb-4">Intervalle de confiance</h3>
+                                <p class="text-lg text-slate-700 mb-4">C'est une plage de valeurs dans laquelle se trouve probablement le véritable odds ratio de la population entière, pas seulement de notre petit échantillon.</p>
+                                <div class="relative pt-8 pb-4 mt-6">
+                                    <div class="h-2 bg-slate-200 rounded-full w-full"></div>
+                                    <div class="absolute top-7 left-1/4 h-4 w-1/2 bg-indigo-400 rounded-full opacity-50"></div>
+                                    <div class="absolute top-6 left-1/2 w-1 h-6 bg-red-500"></div>
+                                    <span class="absolute top-1 left-1/2 -ml-3 text-red-600 font-bold">1</span>
+                                </div>
+                                <p class="text-slate-700 mt-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                    <strong class="text-blue-900">Règle d'or :</strong> Si l'intervalle de confiance <strong class="text-red-600 underline">ne contient pas</strong> la valeur 1, l'association est considérée comme statistiquement significative.
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded shadow-lg transform transition-transform duration-300 translate-y-20 opacity-0 z-50">
+        Code copié dans le presse-papiers !
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartData = {
+                labels: ['Hommes', 'Femmes'],
+                datasets: [
+                    {
+                        label: 'Avec chat',
+                        data: [4, 8],
+                        backgroundColor: '#4f46e5',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Sans chat',
+                        data: [6, 2],
+                        backgroundColor: '#cbd5e1',
+                        borderRadius: 4
+                    }
+                ]
+            };
+
+            const ctx = document.getElementById('contingencyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Nombre d\'individus' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            const navBtns = document.querySelectorAll('.nav-btn');
+            const sections = document.querySelectorAll('section');
+
+            navBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    navBtns.forEach(b => b.classList.remove('nav-active'));
+                    btn.classList.add('nav-active');
+                    const targetId = btn.getAttribute('data-target');
+                    document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.5
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const targetId = entry.target.id;
+                        navBtns.forEach(b => {
+                            if (b.getAttribute('data-target') === targetId) {
+                                b.classList.add('nav-active');
+                            } else {
+                                b.classList.remove('nav-active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => observer.observe(section));
+
+            const tabs = document.querySelectorAll('.interp-tab');
+            const contents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => {
+                        t.classList.remove('tab-active');
+                        t.classList.add('text-slate-600', 'hover:bg-slate-50');
+                    });
+                    
+                    tab.classList.add('tab-active');
+                    tab.classList.remove('text-slate-600', 'hover:bg-slate-50');
+
+                    const targetContent = tab.getAttribute('data-tab');
+                    contents.forEach(content => {
+                        if (content.id === 'content-' + targetContent) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        });
+
+        function copyCode(elementId) {
+            const textToCopy = document.getElementById(elementId).innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast();
+            } catch (err) {
+                console.error('Erreur lors de la copie', err);
+            }
+            
+            document.body.removeChild(textarea);
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
